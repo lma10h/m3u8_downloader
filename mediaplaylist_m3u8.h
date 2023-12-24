@@ -20,6 +20,8 @@ public:
     QUuid uuid() const;
     QString fileName() const;
 
+    void setHeader(const QByteArray &key, const QByteArray &value);
+
 signals:
     void resultIsReady(const QUuid &uuid);
 
@@ -35,6 +37,7 @@ private:
 
     QUrl m_url;
     QUrl m_effectiveUrl;
+    QHash<QByteArray, QByteArray> m_requestHeaders;
 
     QFile m_file;
     QUuid m_uuid;

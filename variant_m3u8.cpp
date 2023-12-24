@@ -53,6 +53,8 @@ bool VariantM3U8::request()
         ++it;
     }
 
+    qCDebug(variant_M3U8) << "GET";
+
     m_reply = m_qnam.get(request);
 
     connect(m_reply, &QNetworkReply::finished, this, &VariantM3U8::replyFinished);
@@ -177,6 +179,12 @@ void VariantM3U8::processVariantM3U8()
             url.replace(m_file.fileName(), mediaPlaylist);
 
             QSharedPointer<MediaPlaylistM3U8> mp(new MediaPlaylistM3U8(url));
+            auto it = m_requestHeaders.cbegin();
+            while (it != m_requestHeaders.cend()) {
+                mp->setHeader(it.key(), it.value());
+                ++it;
+            }
+
             m_mediaPlaylistList.insert(mp->uuid(), mp);
             connect(mp.get(), &MediaPlaylistM3U8::resultIsReady, this,
                     &VariantM3U8::mediaPlaylistFinished);

@@ -29,9 +29,13 @@ bool MediaPlaylistM3U8::request()
     // TODO
     // request.setTransferTimeout(1000);
 
-    request.setRawHeader(
-        "User-Agent",
-        "RT-STB-FW/6.0.2511 (swt_amls805; SWITRON-IPTV-1500) sdk-mediaplayer/1.0.2700");
+    auto it = m_requestHeaders.cbegin();
+    while (it != m_requestHeaders.cend()) {
+        request.setRawHeader(it.key(), it.value());
+        qCDebug(media_M3U8) << it.key() << ":" << it.value();
+        ++it;
+    }
+    qCDebug(media_M3U8) << "GET";
 
     m_reply = m_qnam.get(request);
 
@@ -60,6 +64,11 @@ QUuid MediaPlaylistM3U8::uuid() const
 QString MediaPlaylistM3U8::fileName() const
 {
     return m_effectiveUrl.fileName();
+}
+
+void MediaPlaylistM3U8::setHeader(const QByteArray &key, const QByteArray &value)
+{
+    m_requestHeaders.insert(key, value);
 }
 
 void MediaPlaylistM3U8::replyFinished()
@@ -138,6 +147,12 @@ void MediaPlaylistM3U8::processMediaPlaylist()
             url.replace(m_file.fileName(), chunkAddress);
 
             QSharedPointer<Chunk> chunk(new Chunk(url));
+            auto it = m_requestHeaders.cbegin();
+            while (it != m_requestHeaders.cend()) {
+                chunk->setHeader(it.key(), it.value());
+                ++it;
+            }
+
             m_chunkList.insert(chunk->uuid(), chunk);
             connect(chunk.get(), &Chunk::resultIsReady, this, &MediaPlaylistM3U8::chunkFinished);
 

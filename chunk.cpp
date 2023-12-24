@@ -27,9 +27,14 @@ bool Chunk::request()
     // TODO
     // request.setTransferTimeout(1000);
 
-    request.setRawHeader(
-        "User-Agent",
-        "RT-STB-FW/6.0.2511 (swt_amls805; SWITRON-IPTV-1500) sdk-mediaplayer/1.0.2700");
+    auto it = m_requestHeaders.cbegin();
+    while (it != m_requestHeaders.cend()) {
+        request.setRawHeader(it.key(), it.value());
+        qCDebug(chunk_M3U8) << it.key() << ":" << it.value();
+        ++it;
+    }
+
+    qCDebug(chunk_M3U8) << "GET";
 
     m_reply = m_qnam.get(request);
 
@@ -57,6 +62,11 @@ QString Chunk::fileName() const
 QUuid Chunk::uuid() const
 {
     return m_uuid;
+}
+
+void Chunk::setHeader(const QByteArray &key, const QByteArray &value)
+{
+    m_requestHeaders.insert(key, value);
 }
 
 void Chunk::replyFinished()

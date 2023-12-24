@@ -18,6 +18,8 @@ public:
     QString fileName() const;
     QUuid uuid() const;
 
+    void setHeader(const QByteArray &key, const QByteArray &value);
+
 signals:
     void resultIsReady(const QUuid &uuid);
 
@@ -30,6 +32,7 @@ private:
     QUrl m_url;
     QUuid m_uuid;
     QFile m_file;
+    QHash<QByteArray, QByteArray> m_requestHeaders;
 
     QNetworkAccessManager m_qnam; // two instances in one thread, is OK ?
     QNetworkReply *m_reply = nullptr;
