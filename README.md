@@ -1,4 +1,6 @@
 ```
+HLS playlist and chunks downloader, from variant.m3u8 or playlist.m3u8.
+
 ./m3u8_downloader --help
 Usage: ./m3u8_downloader [options]
 restream, m3u8-downloader
@@ -14,7 +16,7 @@ Options:
   --mp, --media <http://example.com/playlist.m3u8>   Set url to playlist.m3u8
   --ua, --user-agent <"Custom Agent">                Set user agent
 
-./m3u8_downloader --va "http://37.204.139.222:8080/hls/hd_2022_Pervaya_ledi_Sezon_1_s01_v1_trailer_680d9c38.ts/variant.m3u8" --ua "RT-STB-FW/6.0.2511 (swt_amls805; SWITRON-IPTV-1500) sdk-mediaplayer/1.0.2700"
+./m3u8_downloader --va "http://37.204.139.222:8080/hls/hd_2022_Pervaya_ledi_Sezon_1_s01_v1_trailer_680d9c38.ts/variant.m3u8"
 
 variant: save to "/home/osipovrs/build-m3u8_downloader-Desktop_Qt_6_5_3_GCC_64bit-Debug/variant.m3u8"
 variant: url: "http://37.204.139.222:8080/hls/hd_2022_Pervaya_ledi_Sezon_1_s01_v1_trailer_680d9c38.ts/variant.m3u8"
