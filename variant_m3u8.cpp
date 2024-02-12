@@ -1,7 +1,6 @@
 #include "variant_m3u8.h"
 
 #include <QDir>
-#include <QFileInfo>
 #include <QLoggingCategory>
 
 #include <mediaplaylist_m3u8.h>
@@ -23,14 +22,16 @@ VariantM3U8::~VariantM3U8()
 
 void VariantM3U8::setUrl(const QUrl &url)
 {
+    if (!url.isValid()) {
+        qCDebug(variant_M3U8) << "set url:" << url << "is invalid, " << url.errorString();
+        return;
+    }
+
     m_url = url;
     m_effectiveUrl = m_url;
 
     m_file.setFileName(url.fileName());
-    QFileInfo fi;
-    fi.setFile(m_file);
-
-    qCDebug(variant_M3U8) << "save to" << fi.absoluteFilePath();
+    qCDebug(variant_M3U8) << "save to" << m_file.fileName();
 }
 
 void VariantM3U8::setHeader(const QByteArray &key, const QByteArray &value)
@@ -45,7 +46,6 @@ bool VariantM3U8::request()
     // TODO
     // request.setTransferTimeout(1000);
 
-    qCDebug(variant_M3U8) << "url:" << m_url.toString();
     auto it = m_requestHeaders.cbegin();
     while (it != m_requestHeaders.cend()) {
         request.setRawHeader(it.key(), it.value());
@@ -53,7 +53,7 @@ bool VariantM3U8::request()
         ++it;
     }
 
-    qCDebug(variant_M3U8) << "GET";
+    qCDebug(variant_M3U8) << "GET" << m_url.toString();
 
     m_reply = m_qnam.get(request);
 
@@ -93,6 +93,7 @@ void VariantM3U8::replyFinished()
         qCDebug(variant_M3U8) << "error:" << errorString;
     }
 
+    qCDebug(variant_M3U8) << "finished:" << m_url;
     processVariantM3U8();
 }
 
@@ -143,11 +144,9 @@ void VariantM3U8::mediaPlaylistFinished(const QUuid &uuid)
     }
 
     const auto &mp = m_mediaPlaylistList.value(uuid);
-    qCDebug(variant_M3U8) << "media playlist:" << mp->fileName() << "finished";
     m_mediaPlaylistList.remove(mp->uuid());
 
     if (m_mediaPlaylistList.isEmpty()) {
-        qCDebug(variant_M3U8) << "finished";
         emit resultIsReady();
     }
 }
@@ -166,6 +165,7 @@ void VariantM3U8::processVariantM3U8()
     QTextStream in(&playlist);
     while (!in.atEnd()) {
         const QString &line = in.readLine();
+
         if (line.startsWith("#EXT-X-STREAM-INF")) {
             const QString &mediaPlaylist = in.readLine();
             if (mediaPlaylist.startsWith("http")) {
@@ -176,9 +176,23 @@ void VariantM3U8::processVariantM3U8()
 
             // relative path to media playlist
             QString url = m_effectiveUrl.toString();
-            url.replace(m_file.fileName(), mediaPlaylist);
+            url.replace(m_url.fileName(), mediaPlaylist);
 
-            QSharedPointer<MediaPlaylistM3U8> mp(new MediaPlaylistM3U8(url));
+            QString targetDir
+                = QString("%1/%2")
+                      .arg(QDir::currentPath())
+                      .arg(QUrl(mediaPlaylist)
+                               .adjusted(QUrl::RemoveFilename | QUrl::StripTrailingSlash)
+                               .toString());
+            if (targetDir.isEmpty()) {
+                targetDir = QDir::currentPath();
+            } else {
+                if (!QDir().mkpath(targetDir)) {
+                    qCDebug(variant_M3U8) << "create dir:" << targetDir << "failed";
+                }
+            }
+
+            QSharedPointer<MediaPlaylistM3U8> mp(new MediaPlaylistM3U8(url, targetDir));
             auto it = m_requestHeaders.cbegin();
             while (it != m_requestHeaders.cend()) {
                 mp->setHeader(it.key(), it.value());

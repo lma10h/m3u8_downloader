@@ -9,12 +9,15 @@
 
 Q_LOGGING_CATEGORY(chunk_M3U8, "chunk")
 
-Chunk::Chunk(const QUrl &url, QObject *parent)
+Chunk::Chunk(const QUrl &url, const QString &dir, QObject *parent)
     : QObject{parent}
     , m_url(url)
     , m_uuid(QUuid::createUuid())
-    , m_file(m_url.fileName())
+    , m_file(QString("%1/%2").arg(dir).arg(m_url.fileName()))
+    , m_dir(dir)
 {
+    qCDebug(chunk_M3U8) << "save to" << m_file.fileName();
+
     if (!m_url.isValid()) {
         qCDebug(chunk_M3U8) << "invalid url:" << url;
         throw std::invalid_argument("invalid url");
@@ -34,7 +37,7 @@ bool Chunk::request()
         ++it;
     }
 
-    qCDebug(chunk_M3U8) << "GET";
+    qCDebug(chunk_M3U8) << QTime::currentTime() << "GET" << m_url;
 
     m_reply = m_qnam.get(request);
 
@@ -86,6 +89,7 @@ void Chunk::replyFinished()
         qCDebug(chunk_M3U8) << "error:" << errorString;
     }
 
+    qCDebug(chunk_M3U8) << "chunk finished: " << m_url;
     emit resultIsReady(m_uuid);
 }
 

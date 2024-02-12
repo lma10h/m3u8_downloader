@@ -10,13 +10,16 @@
 
 Q_LOGGING_CATEGORY(media_M3U8, "media")
 
-MediaPlaylistM3U8::MediaPlaylistM3U8(const QUrl &url, QObject *parent)
+MediaPlaylistM3U8::MediaPlaylistM3U8(const QUrl &url, const QString &dir, QObject *parent)
     : QObject{parent}
     , m_url(url)
     , m_effectiveUrl(url)
-    , m_file(m_url.fileName())
+    , m_file(QString("%1/%2").arg(dir).arg(m_url.fileName()))
     , m_uuid(QUuid::createUuid())
+    , m_dir(dir)
 {
+    qCDebug(media_M3U8) << "save to" << m_file.fileName();
+
     if (!url.isValid()) {
         qCDebug(media_M3U8) << "invalid url:" << url;
         throw std::invalid_argument("invalid url");
@@ -35,7 +38,7 @@ bool MediaPlaylistM3U8::request()
         qCDebug(media_M3U8) << it.key() << ":" << it.value();
         ++it;
     }
-    qCDebug(media_M3U8) << "GET";
+    qCDebug(media_M3U8) << "GET" << m_url.toString();
 
     m_reply = m_qnam.get(request);
 
@@ -88,6 +91,7 @@ void MediaPlaylistM3U8::replyFinished()
         qCDebug(media_M3U8) << "error:" << errorString;
     }
 
+    qCDebug(media_M3U8) << "finished:" << m_url;
     processMediaPlaylist();
 }
 
@@ -144,35 +148,63 @@ void MediaPlaylistM3U8::processMediaPlaylist()
 
             // relative path to media playlist
             QString url = m_effectiveUrl.toString();
-            url.replace(m_file.fileName(), chunkAddress);
+            url.replace(m_url.fileName(), chunkAddress);
 
-            QSharedPointer<Chunk> chunk(new Chunk(url));
+            QSharedPointer<Chunk> chunk(new Chunk(url, m_dir));
+
             auto it = m_requestHeaders.cbegin();
             while (it != m_requestHeaders.cend()) {
                 chunk->setHeader(it.key(), it.value());
                 ++it;
             }
 
-            m_chunkList.insert(chunk->uuid(), chunk);
+            m_chunkListToDo.insert(chunk->uuid(), chunk);
             connect(chunk.get(), &Chunk::resultIsReady, this, &MediaPlaylistM3U8::chunkFinished);
-
-            chunk->request();
         }
     }
+
+    // запустим @m_maxOpenFiles запросов одновременно
+    // ограничение из за максимально возможного кол-ва открытых файлов
+
+    qCDebug(media_M3U8) << "chunks:" << m_chunkListToDo.size();
+
+    int number = m_maxOpenFiles;
+    auto it = m_chunkListToDo.begin();
+    while (number > 0) {
+        if (it == m_chunkListToDo.end()) {
+            break;
+        }
+
+        m_chunkListInProgress.insert(it.key(), it.value());
+        m_chunkListToDo.remove(it.key());
+
+        --number;
+        ++it;
+    }
+
+    std::for_each(m_chunkListInProgress.begin(), m_chunkListInProgress.end(),
+                  [](const QSharedPointer<Chunk> &p) { p->request(); });
 }
 
-void MediaPlaylistM3U8::chunkFinished(const QUuid &uuid)
+void MediaPlaylistM3U8::chunkFinished(const QUuid &chunkUuid)
 {
-    if (!m_chunkList.contains(uuid)) {
-        qCDebug(media_M3U8) << "unknown uuid: " << uuid;
+    if (!m_chunkListInProgress.contains(chunkUuid)) {
+        qCDebug(media_M3U8) << "unknown uuid: " << chunkUuid;
         return;
     }
 
-    auto chunk = m_chunkList.value(uuid);
-    qCDebug(media_M3U8) << "chunk:" << chunk->fileName() << "finished";
-    m_chunkList.remove(chunk->uuid());
-
-    if (m_chunkList.isEmpty()) {
+    m_chunkListInProgress.remove(chunkUuid);
+    if (m_chunkListToDo.isEmpty()) {
         emit resultIsReady(m_uuid);
+        return;
     }
+
+    auto nextChunk = m_chunkListToDo.begin();
+    const auto nextUuid = nextChunk.key();
+    const auto nextPointer = nextChunk.value();
+
+    m_chunkListToDo.remove(nextUuid);
+    m_chunkListInProgress.insert(nextUuid, nextPointer);
+
+    nextPointer->request();
 }

@@ -11,7 +11,7 @@ class Chunk : public QObject
 {
     Q_OBJECT
 public:
-    explicit Chunk(const QUrl &url, QObject *parent = nullptr);
+    explicit Chunk(const QUrl &url, const QString &dir, QObject *parent = nullptr);
 
     bool request();
 
@@ -36,6 +36,8 @@ private:
 
     QNetworkAccessManager m_qnam; // two instances in one thread, is OK ?
     QNetworkReply *m_reply = nullptr;
+
+    QString m_dir;
 };
 
 #endif // CHUNK_H
