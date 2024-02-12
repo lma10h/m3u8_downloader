@@ -11,6 +11,7 @@ Options:
   -v, --version                                      Displays version
                                                      information.
   --va, --variant <http://example.com/variant.m3u8>  Set url to variant.m3u8
+  --mp, --media <http://example.com/playlist.m3u8>   Set url to playlist.m3u8
   --ua, --user-agent <"Custom Agent">                Set user agent
 
 ./m3u8_downloader --va "http://37.204.139.222:8080/hls/hd_2022_Pervaya_ledi_Sezon_1_s01_v1_trailer_680d9c38.ts/variant.m3u8" --ua "RT-STB-FW/6.0.2511 (swt_amls805; SWITRON-IPTV-1500) sdk-mediaplayer/1.0.2700"
