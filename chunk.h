@@ -38,6 +38,10 @@ private:
     QNetworkReply *m_reply = nullptr;
 
     QString m_dir;
+
+    // TODO
+    // сравнить с Content-Length и если отличается писать об этом ворнинг
+    int m_totalBytes = 0;
 };
 
 #endif // CHUNK_H

@@ -194,17 +194,20 @@ void MediaPlaylistM3U8::chunkFinished(const QUuid &chunkUuid)
     }
 
     m_chunkListInProgress.remove(chunkUuid);
-    if (m_chunkListToDo.isEmpty()) {
+
+    if (!m_chunkListToDo.isEmpty()) {
+        auto nextChunk = m_chunkListToDo.begin();
+        const auto nextUuid = nextChunk.key();
+        const auto nextPointer = nextChunk.value();
+
+        m_chunkListToDo.remove(nextUuid);
+        m_chunkListInProgress.insert(nextUuid, nextPointer);
+
+        nextPointer->request();
+    }
+
+    if (m_chunkListInProgress.isEmpty()) {
         emit resultIsReady(m_uuid);
         return;
     }
-
-    auto nextChunk = m_chunkListToDo.begin();
-    const auto nextUuid = nextChunk.key();
-    const auto nextPointer = nextChunk.value();
-
-    m_chunkListToDo.remove(nextUuid);
-    m_chunkListInProgress.insert(nextUuid, nextPointer);
-
-    nextPointer->request();
 }

@@ -89,13 +89,15 @@ void Chunk::replyFinished()
         qCDebug(chunk_M3U8) << "error:" << errorString;
     }
 
-    qCDebug(chunk_M3U8) << "chunk finished: " << m_url;
+    qCDebug(chunk_M3U8) << "chunk finished: " << m_url << ", totalBytes:" << m_totalBytes;
     emit resultIsReady(m_uuid);
 }
 
 void Chunk::replyReadyRead()
 {
-    m_file.write(m_reply->readAll());
+    auto ba = m_reply->readAll();
+    m_totalBytes += ba.size();
+    m_file.write(ba);
 }
 
 void Chunk::sslErrors(const QList<QSslError> &errors)
